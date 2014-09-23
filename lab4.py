@@ -1,3 +1,6 @@
+#!/bin/python
+# -*- coding:utf-8 -*-
+
 from PIL import Image, ImageDraw
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
