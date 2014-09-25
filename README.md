@@ -31,11 +31,13 @@
 ## Инструкция по запуску на Windows
 
 1. Скачать интерпретатор языка python (v2.7.9)
-- 32 bit: <https://www.python.org/ftp/python/2.7.8/python-2.7.8.msi>
-- 64 bit: <https://www.python.org/ftp/python/2.7.8/python-2.7.8.amd64.msi>
+  - 32 bit: <https://www.python.org/ftp/python/2.7.8/python-2.7.8.msi>
+  - 64 bit: <https://www.python.org/ftp/python/2.7.8/python-2.7.8.amd64.msi>
 
 2. Установить интерпретатор языка python (сохранив путь по умолчанию)
+
 3. Запустить файл установки необходимой библиотеки (работа с изображениями)
 Двойной клик по `install_deps.bat`.
+
 4. Запустить программу.
 Двойной клик по `run.bat`.
