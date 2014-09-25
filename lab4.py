@@ -15,6 +15,12 @@ def abs_selection( sel ):
 def e_kernel(r):
     return 0.75 * ( 1.0 - r**2 ) if abs(r) <= 1 else 0
 
+# вычисление расстояния
+# A, B - вектора размерности N
+# если p заданно, оно должно быть целым числом
+# p - критерий пространства (p==2 - эвклидово)
+# W - вектор весов компонентов координат (размерность N)
+# если W не задан, заполняется 1
 def dist(A, B, p=None, W=None):
     s = 0
     if not W:
@@ -28,17 +34,22 @@ def dist(A, B, p=None, W=None):
 
     return s ** ( 1.0 / p )
 
+# интеграл V
+# pnt - оцениваемый вектор
+# X - массив векторов класса
 def V(pnt, X, h, kernel):
     s = 0
     for x in X:
         s += kernel( dist(pnt, x) / h )
     return s
 
+# pnt - оцениваемый вектор
+# y - класс (массив векторов) для которого считается критерий
+# Y - все классы в одном массиве
 def parzen(pnt, y, Y, h, kernel):
     ly = 1.0
     zn = ly * V(pnt, Y, h, kernel)
-    if zn == 0:
-        return 0.0
+    if zn == 0: return 0.0
     return V(pnt, y, h, kernel) / zn
 
 def open_img_draw(img_path):
@@ -50,6 +61,7 @@ def open_img(img_path):
     img = Image.open(img_path)
     return img
 
+# вывод на экран выделенной области
 def select_image_rect( img, sel):
     draw = ImageDraw.Draw(img)
     w = img.size[0]
@@ -69,31 +81,33 @@ def select_image_rect( img, sel):
 
     img.show()
 
+# pix - массив двумерный пикселей
+# win - окно в абсолютных
 def calc_distributons( pix, win ):
-    exp_H = 0.0
-    exp_V = 0.0
+    exp = [0.0, 0.0]
     k = 0
     for i in range(win[0], win[2]):
         for j in range(win[1], win[3]):
             h,s,v = rgb_to_hsv( pix[i,j][0], pix[i,j][1], pix[i,j][2] )
-            exp_H += h
-            exp_V += v
+            exp[0] += h
+            exp[1] += v
             k += 1
-    exp_H /= k
-    exp_V /= k
+    exp[0] /= k
+    exp[1] /= k
 
-    var_H = 0.0
-    var_V = 0.0
+    var = [0.0, 0.0]
     for i in range(win[0], win[2]):
         for j in range(win[1], win[3]):
             h,s,v = rgb_to_hsv( pix[i,j][0], pix[i,j][1], pix[i,j][2] )
-            var_H += ( exp_H - h ) ** 2
-            var_V += ( exp_V - v ) ** 2
-    var_H /= (k-1)
-    var_V /= (k-1)
+            var[0] += ( exp[0] - h ) ** 2
+            var[1] += ( exp[1] - v ) ** 2
+    var[0] /= (k-1)
+    var[1] /= (k-1)
 
-    return (exp_H, var_H, exp_V, var_V)
+    return ( exp[0], var[0], exp[1], var[1] )
 
+# подсчитать значения МО и дисперсии для
+# каждого фрагмента выделеного изображения
 def calc_class_sample( img, sel, step=4, winsize=8 ):
     pix = img.load()
 
@@ -121,11 +135,11 @@ def flat_one_level(arr):
     return res
 
 colors = [ (1,0,0),
-            (0,1,0),
-            (0,0,1),
-            (1,1,0),
-            (1,0,1),
-            (0,1,1) ]
+           (0,1,0),
+           (0,0,1),
+           (1,1,0),
+           (1,0,1),
+           (0,1,1) ]
 
 colors = [ tuple( int(c*255) for c in clr ) for clr in colors ]
 
@@ -136,7 +150,6 @@ def prepare( img, winsize ):
     img_res = Image.new( 'RGB', (w-winsize,h-winsize), (0,0,0) )
     draw = ImageDraw.Draw(img_res)
     return (pix,w,h,img_res,draw)
-
 
 def classificate( img, winsize, Y, h, kfunc=e_kernel ):
 
@@ -152,51 +165,24 @@ def classificate( img, winsize, Y, h, kfunc=e_kernel ):
             clr = (0,0,0)
             maxr = max(r)
             if( maxr > 0 ):
-                index = r.index(max(r))
+                index = r.index(maxr)
                 clr = colors[index]
             draw.rectangle( [(i,j),(i+step,j+step)], clr )
     return img_res
 
-def cd2( Y ):
+# clss - массив из классов, где класс это массив картежей
+# картеж этот состоит из имени файла и области выделения
+def get_all_classes_samples( clss, step, winsize ):
     res = []
-    for y in Y:
-        exp = tuple( 0.0 for i in y[0] )
-        var = exp
-        for v in y:
-            exp = tuple( (e + n) for e,n in zip(exp,v) )
-        exp = tuple( e / len(y) for e in exp )
-        for v in y:
-            var += tuple( ( e - n ) ** 2 for e,n in zip(var,v) )
-        var = tuple( v / (len(y)-1) for v in var )
-        res.append( (exp,var) )
+    for class_examples in clss:
+        class_sample = []
+        for fname, selection in class_examples:
+            image = open_img( fname )
+            sel = abs_selection(selection)
+            class_sample += calc_class_sample( image, sel, step, winsize )
+            #select_image_rect( image, sel )
+        res.append( class_sample )
     return res
-
-def hmmm(pnt,dp):
-    s = 0.0
-    exp, var = dp
-    for p,e,v in zip(pnt,exp,var):
-        s += (( p - e ) ** 2) / ( v + 1.0 )
-    return s
-
-def classificate2( img, winsize, Y, h, kfunc=e_kernel ):
-
-    pix, w, h, img_res, draw = prepare(img,winsize)
-    step = 4
-
-    zz = cd2( Y )
-
-    for j in range(0,h-winsize,step):
-        for i in range(0,w-winsize,step):
-            win = abs_selection( [i,j,winsize,winsize] )
-            pnt = calc_distributons(pix,win)
-            r = [ hmmm(pnt, z) for z in zz ]
-            clr = (0,0,0)
-            maxr = max(r)
-            if( maxr > 0 ):
-                index = r.index(max(r))
-                clr = colors[index]
-            draw.rectangle( [(i,j),(i+step,j+step)], clr )
-    return img_res
 
 classes = [
             #forest
@@ -215,24 +201,23 @@ classes = [
             ]
           ]
 
-Y = []
-h = 6
+def write_class_to_file( fname, cls ):
+    with open(fname, "w") as f:
+        for sample in cls:
+            f.write( "%f %f %f %f\n"%sample )
+
 step = 16
 winsize = 16
+Y = get_all_classes_samples( classes, step, winsize )
+h = 6
 
-for class_examples in classes:
-    class_sample = []
-    for fname, selection in class_examples:
-        image = open_img( fname )
-        sel = abs_selection(selection)
-        class_sample += calc_class_sample( image, sel, step, winsize )
-        #select_image_rect( image, sel )
-    Y.append( class_sample )
+write_class_to_file( "result_forest", Y[0] )
+write_class_to_file( "result_road", Y[1] )
 
 image = open_img( "img/56.png" )
 
 image.show()
-res = classificate2( image, winsize, Y, h )
+res = classificate( image, winsize, Y, h )
 res.show()
 
 print('complite')
