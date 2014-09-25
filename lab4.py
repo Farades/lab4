@@ -2,12 +2,7 @@
 # -*- coding:utf-8 -*-
 
 from PIL import Image, ImageDraw
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
-import matplotlib.pyplot as plt
 from colorsys import *
-import numpy as np
 
 def abs_selection( sel ):
     return [ sel[0], sel[1], sel[0]+sel[2], sel[1]+sel[3] ]
